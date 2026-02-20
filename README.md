@@ -2,6 +2,8 @@
 
 A personalized family web dashboard created to engage friends and family during a pregnancy. Features include a name voting system, a baby attributes betting game, an integrated wishlist, and a digital flea market for offerings.
 
+![App Demonstration](./docs/demo.webp)
+
 ## Features
 
 - **Countdown & Size Tracker:** 
