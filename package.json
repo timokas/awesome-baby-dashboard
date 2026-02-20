@@ -1,0 +1,14 @@
+{
+  "name": "awesome-baby-dashboard",
+  "version": "1.0.0",
+  "description": "A personalized family web dashboard created to engage friends and family during a pregnancy.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "express-rate-limit": "^8.2.1"
+  }
+}

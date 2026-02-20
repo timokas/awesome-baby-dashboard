@@ -1,0 +1,5 @@
+node_modules/
+data/
+test_output.txt
+.env
+.DS_Store
