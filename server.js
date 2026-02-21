@@ -42,7 +42,15 @@ const sanitize = (str) => {
 };
 
 // Serve static files
-app.use(express.static('public'));
+app.use(express.static('public', {
+    setHeaders: (res, path, stat) => {
+        if (path.endsWith('index.html')) {
+            res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.set('Pragma', 'no-cache');
+            res.set('Expires', '0');
+        }
+    }
+}));
 app.use('/uploads', express.static(UPLOADS_DIR));
 
 // Ensure data directory exists
