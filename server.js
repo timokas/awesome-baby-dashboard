@@ -358,7 +358,8 @@ app.post('/api/offers', (req, res) => {
     let filename = '';
 
     if (matches && matches.length === 3) {
-        const ext = matches[1].split('/')[1] === 'jpeg' ? 'jpg' : (matches[1].split('/')[1] || 'img');
+        // Frontend explicitly uses canvas.toDataURL('image/jpeg') so it's always a jpg
+        const ext = 'jpg';
         filename = `${id}.${ext}`;
         const buffer = Buffer.from(matches[2], 'base64');
         fs.writeFileSync(path.join(UPLOADS_DIR, filename), buffer);
