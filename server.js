@@ -151,34 +151,47 @@ app.delete('/api/names/:id', (req, res) => {
 // POST /api/vote (Vote for a name - Up or Down)
 app.post('/api/vote', (req, res) => {
     const { id, type } = req.body;
-    if (!id) return res.status(400).json({ error: 'ID required' });
+    if (!id || !['up', 'down', 'none'].includes(type)) return res.status(400).json({ error: 'Invalid ID or type' });
 
     // Use CF header fallback if trust proxy fails
     const clientIP = req.headers['cf-connecting-ip'] || req.ip || 'unknown';
 
     const names = readData();
     const name = names.find(n => n.id === id);
-    if (name) {
-        // Init IP tracking array for legacy entries
-        if (!name.votedIPs) name.votedIPs = [];
+    if (!name) return res.status(404).json({ error: 'Name not found' });
 
-        // Check if IP has already voted
-        if (clientIP !== 'unknown' && name.votedIPs.includes(clientIP)) {
-            return res.status(403).json({ error: 'You have already voted for this name.' });
-        }
-
-        if (type === 'down') {
-            name.dislikes = (name.dislikes || 0) + 1;
-        } else {
-            name.votes = (name.votes || 0) + 1;
-        }
-        name.votedIPs.push(clientIP);
-
-        writeData(names);
-        res.json(name);
-    } else {
-        res.status(404).json({ error: 'Name not found' });
+    // Backward compatibility: Convert legacy Array to Object if needed
+    if (Array.isArray(name.votedIPs)) {
+        const legacyMap = {};
+        name.votedIPs.forEach(ip => {
+            // We don't know if legacy was up or down, assume 'up' as it was the default intended action for most
+            legacyMap[ip] = 'up';
+        });
+        name.votedIPs = legacyMap;
+    } else if (!name.votedIPs) {
+        name.votedIPs = {};
     }
+
+    const previousVote = name.votedIPs[clientIP];
+
+    // If IP is known, adjust totals by removing the old vote
+    if (clientIP !== 'unknown' && previousVote) {
+        if (previousVote === 'up') name.votes = Math.max(0, (name.votes || 0) - 1);
+        if (previousVote === 'down') name.dislikes = Math.max(0, (name.dislikes || 0) - 1);
+    }
+
+    // Apply the new vote
+    if (type === 'none') {
+        // User withdrew their vote
+        delete name.votedIPs[clientIP];
+    } else {
+        if (type === 'up') name.votes = (name.votes || 0) + 1;
+        if (type === 'down') name.dislikes = (name.dislikes || 0) + 1;
+        name.votedIPs[clientIP] = type;
+    }
+
+    writeData(names);
+    res.json(name);
 });
 
 // --- Wishlist Endpoints ---

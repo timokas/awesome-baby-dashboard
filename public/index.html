@@ -644,16 +644,9 @@
                 let upClass = 'btn-outline-danger';
 
                 if (myVote === 'down') {
-                    downClass = 'btn-dark'; // Active
-                    upClass = 'btn-outline-danger opacity-25'; // Disabled look
+                    downClass = 'btn-dark pulse-animation'; // Active
                 } else if (myVote === 'up') {
-                    downClass = 'btn-outline-dark opacity-25'; // Disabled look
-                    upClass = 'btn-danger'; // Active
-                }
-
-                if (hasVoted && !myVote) { // Should not happen logic wise but safe fallback
-                    downClass += ' opacity-50';
-                    upClass += ' opacity-50';
+                    upClass = 'btn-danger pulse-animation'; // Active
                 }
 
                 const deleteBtn = adminModeNames
@@ -680,10 +673,10 @@
                                 </div>
                             </div>
                             <div class="d-flex align-items-center gap-2">
-                                <button onclick="vote('${n.id}', 'down')" class="btn ${downClass} rounded-circle p-2" style="width:42px;height:42px;" ${hasVoted ? 'disabled' : ''}>
+                                <button onclick="vote('${n.id}', 'down')" class="btn ${downClass} rounded-circle p-2" style="width:42px;height:42px;">
                                     <i class="bi bi-hand-thumbs-down-fill fs-5"></i>
                                 </button>
-                                <button onclick="vote('${n.id}', 'up')" class="btn ${upClass} rounded-circle p-2" style="width:50px;height:50px;" ${hasVoted ? 'disabled' : ''}>
+                                <button onclick="vote('${n.id}', 'up')" class="btn ${upClass} rounded-circle p-2" style="width:50px;height:50px;">
                                     <i class="bi bi-heart-fill fs-4"></i>
                                 </button>
                             </div>
@@ -727,29 +720,37 @@
 
         async function vote(id, type) {
             const votedState = JSON.parse(localStorage.getItem('voted_state_v2') || '{}');
-            if (votedState[id]) {
-                alert("You have already voted for this name!");
-                return;
+            const currentVote = votedState[id];
+
+            let newType = type;
+
+            // If clicking the same button, retract the vote
+            if (currentVote === type) {
+                newType = 'none';
+                delete votedState[id];
+            } else {
+                votedState[id] = type;
+                if (type === 'up') fireConfetti();
             }
-
-            if (type === 'up') fireConfetti(); // Only confetti for LOVE
-
-            votedState[id] = type;
             localStorage.setItem('voted_state_v2', JSON.stringify(votedState));
 
             try {
-                await fetch(API_VOTE, {
+                const response = await fetch(API_VOTE, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id, type })
+                    body: JSON.stringify({ id, type: newType })
                 });
                 loadNames();
             } catch (e) {
                 alert("Error voting.");
-                // Revert local change on error? Usually better UX to optimistically update but if error, sync on next load.
-                // Ideally rollback here.
-                delete votedState[id];
+                // Revert on error
+                if (currentVote) {
+                    votedState[id] = currentVote;
+                } else {
+                    delete votedState[id];
+                }
                 localStorage.setItem('voted_state_v2', JSON.stringify(votedState));
+                loadNames();
             }
         }
 
