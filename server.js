@@ -25,7 +25,10 @@ app.get('/api/config', (req, res) => {
     });
 });
 
-app.use(express.json({ limit: '10mb' }));
+// We apply different JSON limits per route to prevent DoS via massive payloads.
+// The default is a strict 100kb limit, but /api/offers allows 10MB because of base64 image uploads.
+app.use('/api/offers', express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '100kb' }));
 app.use(cors());
 
 // Security: Basic Rate Limiting
@@ -128,6 +131,7 @@ app.get('/api/names', (req, res) => {
 app.post('/api/names', (req, res) => {
     let { name } = req.body;
     if (!name) return res.status(400).json({ error: 'Name required' });
+    if (name.length > 50) return res.status(400).json({ error: 'Name too long (max 50 chars)' });
     name = sanitize(name);
 
     const names = readData();
@@ -154,8 +158,9 @@ app.post('/api/vote', (req, res) => {
     const { id, type } = req.body;
     if (!id || !['up', 'down', 'none'].includes(type)) return res.status(400).json({ error: 'Invalid ID or type' });
 
-    // Use CF header fallback if trust proxy fails
-    const clientIP = req.headers['cf-connecting-ip'] || req.ip || 'unknown';
+    // Trust proxy is set globally. Use Express `req.ip` rather than trusting CF headers manually.
+    // This stops attackers bypassing the limits when connecting directly instead of via Cloudflare.
+    const clientIP = req.ip || 'unknown';
 
     const names = readData();
     const name = names.find(n => n.id === id);
@@ -209,6 +214,10 @@ app.post('/api/wishlist', (req, res) => {
 
     let { name, link, price, note } = req.body;
     if (!name || !link) return res.status(400).json({ error: 'Name and Link required' });
+
+    if (name.length > 200) return res.status(400).json({ error: 'Name too long (max 200 chars)' });
+    if (price && price.length > 50) return res.status(400).json({ error: 'Price too long (max 50 chars)' });
+    if (note && note.length > 500) return res.status(400).json({ error: 'Note too long (max 500 chars)' });
 
     try {
         const parsedUrl = new URL(link);
@@ -307,6 +316,8 @@ app.post('/api/bets', (req, res) => {
     let { name, date, time, weight, size } = req.body;
     if (!name || !date || !weight || !size) return res.status(400).json({ error: 'Missing fields' });
 
+    if (name.length > 50) return res.status(400).json({ error: 'Name too long (max 50 chars)' });
+
     name = sanitize(name);
     date = sanitize(date);
     time = sanitize(time);
@@ -379,6 +390,9 @@ app.get('/api/offers', (req, res) => {
 app.post('/api/offers', async (req, res) => {
     let { name, email, description, imageBase64 } = req.body;
     if (!name || !description || !imageBase64) return res.status(400).json({ error: 'Missing fields' });
+
+    if (name.length > 50) return res.status(400).json({ error: 'Name too long (max 50 chars)' });
+    if (description.length > 1000) return res.status(400).json({ error: 'Description too long (max 1000 chars)' });
 
     name = sanitize(name);
     email = sanitize(email);
