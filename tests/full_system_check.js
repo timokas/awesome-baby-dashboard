@@ -2,7 +2,7 @@ const http = require('http');
 
 const HOST = process.env.TEST_HOST || '192.168.178.51';
 const PORT = process.env.TEST_PORT || 8091;
-const PIN = process.env.ADMIN_PIN || '1234';
+const PIN = process.env.ADMIN_PIN || 'test-pin';
 const PIN_HEADER = { 'x-admin-pin': PIN };
 
 // Request Helper
@@ -137,7 +137,7 @@ async function runTests() {
             name: "TestUser",
             email: "test@example.com",
             description: "Babybett",
-            imageBase64: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP///////////wAA/9sAQwE" // Dummy 1x1 image/string
+            imageBase64: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" // Valid 1x1 PNG for sharp to parse
         };
         const res = await request('POST', '/api/offers', offer);
         if (res.status !== 201) throw new Error(`Status ${res.status}`);

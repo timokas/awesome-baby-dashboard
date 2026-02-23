@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
+const sharp = require('sharp');
 
 const app = express();
 const PORT = 3000;
@@ -209,6 +210,15 @@ app.post('/api/wishlist', (req, res) => {
     let { name, link, price, note } = req.body;
     if (!name || !link) return res.status(400).json({ error: 'Name and Link required' });
 
+    try {
+        const parsedUrl = new URL(link);
+        if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+            return res.status(400).json({ error: 'Invalid link protocol. Only http and https are allowed.' });
+        }
+    } catch (e) {
+        return res.status(400).json({ error: 'Invalid link format.' });
+    }
+
     name = sanitize(name);
     link = sanitize(link);
     price = sanitize(price);
@@ -366,7 +376,7 @@ app.get('/api/offers', (req, res) => {
 });
 
 // POST /api/offers (Requires name, email, description, and base64 image)
-app.post('/api/offers', (req, res) => {
+app.post('/api/offers', async (req, res) => {
     let { name, email, description, imageBase64 } = req.body;
     if (!name || !description || !imageBase64) return res.status(400).json({ error: 'Missing fields' });
 
@@ -379,11 +389,19 @@ app.post('/api/offers', (req, res) => {
     let filename = '';
 
     if (matches && matches.length === 3) {
-        // Frontend explicitly uses canvas.toDataURL('image/jpeg') so it's always a jpg
         const ext = 'jpg';
         filename = `${id}.${ext}`;
         const buffer = Buffer.from(matches[2], 'base64');
-        fs.writeFileSync(path.join(UPLOADS_DIR, filename), buffer);
+
+        try {
+            await sharp(buffer)
+                .resize({ width: 800, withoutEnlargement: true })
+                .jpeg({ quality: 80 })
+                .toFile(path.join(UPLOADS_DIR, filename));
+        } catch (err) {
+            console.error('Image processing failed:', err);
+            return res.status(400).json({ error: 'Invalid image data' });
+        }
     } else {
         return res.status(400).json({ error: 'Invalid image format' });
     }
