@@ -1,8 +1,7 @@
 const http = require('http');
 
-// Configuration
-const HOST = '192.168.178.51';
-const PORT = 8091;
+const HOST = process.env.TEST_HOST || '192.168.178.51';
+const PORT = process.env.TEST_PORT || 8091;
 const PIN = process.env.ADMIN_PIN || '1234';
 const PIN_HEADER = { 'x-admin-pin': PIN };
 
